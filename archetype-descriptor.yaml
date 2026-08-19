@@ -1,0 +1,53 @@
+# Platform descriptor for billing-service.
+name: billing-service
+description: Invoicing and card charging for Northwind Retail
+organization: northwind-retail
+owner: billing-platform
+notifications:
+  email: billing-platform@northwind.example
+
+compute:
+  instanceType: c6i.2xlarge
+  minInstances: 6
+  maxInstances: 24
+  multiAZ: true
+  healthcheck:
+    path: /healthcheck
+    interval: 10
+
+environmentVariables:
+  ACQUIRER_BASE_URL: https://api.worldpay.example/v3
+  TAX_SERVICE_BASE_URL: http://tax-service.prod.internal
+
+# Secrets are resolved at deploy time from the platform secret store. Values never appear in
+# this file.
+secrets:
+  ACQUIRER_API_KEY: ${secretstore:billing/acquirer/worldpay-live}
+
+# Every money-moving path needs an alarm. A charge that fails silently is discovered by
+# finance during reconciliation, days later.
+alarms:
+  - name: ChargeErrorRate
+    metric: custom:billing.charge.5xx.rate
+    comparison: GreaterThanThreshold
+    threshold: 1
+    periods: 2
+    priority: P1
+  - name: ChargeDeclineRate
+    metric: custom:billing.charge.declined.rate
+    comparison: GreaterThanThreshold
+    threshold: 15
+    periods: 3
+    priority: P2
+  - name: AcquirerLatencyP99
+    metric: custom:billing.acquirer.latency.p99
+    comparison: GreaterThanThreshold
+    threshold: 2500
+    periods: 3
+    priority: P2
+  - name: TaxServiceErrorRate
+    metric: custom:billing.tax.5xx.rate
+    comparison: GreaterThanThreshold
+    threshold: 2
+    periods: 2
+    priority: P2

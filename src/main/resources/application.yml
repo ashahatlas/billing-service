@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: billing-service
+
+server:
+  tomcat:
+    threads:
+      max: 200
+
+# --------------------------------------------------------------------------------------
+# Acquirer
+#
+# apiKey is injected from the platform secret store. Never commit an acquirer key — it is
+# tied to the merchant account and rotating it needs a ticket with Worldpay.
+# --------------------------------------------------------------------------------------
+acquirer:
+  baseUrl: ${ACQUIRER_BASE_URL}
+  apiKey: ${ACQUIRER_API_KEY}
+
+clients:
+  tax:
+    baseUrl: ${TAX_SERVICE_BASE_URL}
+    connectTimeout: 200ms
+    readTimeout: 500ms
+
+logging:
+  level:
+    com.northwind.billing: INFO
