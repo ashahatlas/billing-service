@@ -5,17 +5,19 @@ production traffic continuously — every charge this service takes is money mov
 
 ## Responsibilities
 
-- `POST /v1/invoices/{invoiceId}/charge` — charges an invoice against a card, applying tax.
+- `POST /v1/charges` — charges an invoice against a card, applying tax. Preferred.
+- `POST /v1/invoices/{invoiceId}/charge` — the original form, unchanged.
 
-Supported card networks today: **Visa** and **Mastercard**, both settled through the
-Worldpay acquirer.
+Supported card networks: **Visa** and **Mastercard** through the Worldpay acquirer, and
+**American Express** through Amex Direct.
 
 ## Dependencies
 
 | Service | Used for | Criticality |
 | --- | --- | --- |
 | `tax-service` | tax on the invoice subtotal | hard — we do not charge an untaxed amount |
-| Worldpay acquirer (external) | authorisation and settlement | hard |
+| Worldpay acquirer (external) | Visa and Mastercard settlement | hard |
+| Amex Direct (external) | American Express settlement | hard |
 
 `payment-service` handles the storefront checkout path and holds its own gateway
 relationship. The two services are siblings, not layered.
@@ -26,12 +28,10 @@ The charge response is a published contract. Known consumers:
 
 | Consumer | Reads |
 | --- | --- |
-| `order-service` | `cardType`, `total`, `status` — drives order state and the customer receipt |
-| Finance reconciliation export | `cardType`, `acquirerReference`, `total` — grouped by network for the daily settlement file |
+| `order-service` | `cardNetwork`, `total`, `status` — drives order state and the customer receipt |
+| Finance reconciliation export | `cardNetwork`, `acquirerReference`, `total` — grouped by network for the daily settlement file |
 
-Because reconciliation groups by `cardType`, changing what that field *means* is a breaking
-change even when its name and type stay the same. See
-[`docs/api/charge.md`](docs/api/charge.md).
+See [`docs/api/charge.md`](docs/api/charge.md) for the response shape.
 
 ## Rollback
 
