@@ -20,14 +20,33 @@ Worldpay acquirer.
   "chargeId": "chg_9f3b7c21",
   "invoiceId": "inv-1001",
   "subtotal": "249.00",
+  "surcharge": "0.00",
   "tax": "49.80",
   "total": "298.80",
   "currency": "GBP",
-  "cardType": "VISA",
+  "cardType": "CREDIT",
+  "cardNetwork": "VISA",
   "acquirerReference": "wp_4f8a21c7",
   "status": "CHARGED"
 }
 ```
+
+## `POST /v1/charges`
+
+The new consolidated endpoint. Same response, but the invoice goes in the body so callers no
+longer need a separate lookup before charging.
+
+```json
+{
+  "invoiceId": "inv-1001",
+  "cardNumber": "378282246310005",
+  "currency": "GBP",
+  "billingPostcode": "EC2A 4BX"
+}
+```
+
+Amex charges carry a 1.5% surcharge, applied to the subtotal before tax, and settle through
+Amex Direct rather than Worldpay — their `acquirerReference` is prefixed `amex_`.
 
 ## Contract stability
 
@@ -36,22 +55,19 @@ version in the path.
 
 | Field | Consumer | Used for |
 | --- | --- | --- |
-| `cardType` | `order-service` | branches on the network to set order state and choose the receipt template |
-| `cardType` | finance reconciliation | groups the daily settlement file by network |
+| `cardNetwork` | `order-service` | order state and receipt template |
+| `cardNetwork` | finance reconciliation | groups the daily settlement file by network |
 | `acquirerReference` | finance reconciliation, refunds | matching our charges to the acquirer's settlement report |
 | `total`, `status` | `order-service` | order total and whether to release the order |
 
 ### `cardType` values
 
-`VISA` or `MASTERCARD`. Nothing else is currently emitted.
+`CREDIT` or `CHARGE_CARD`. Amex is a charge card; Visa and Mastercard are credit.
 
-**Adding a value is a change consumers must be told about.** `order-service` branches on this
-field, and an unrecognised value falls through to its default path rather than failing loudly.
-
-**Changing what the field means is worse.** The name and JSON type stay the same, so nothing
-fails validation — the data simply arrives wrong, and reconciliation groups money under the
-wrong heading. If new information needs to be carried, add a new field and leave `cardType`
-alone.
+Previously this field carried the card network, which was always a slightly loose use of the
+name. With Amex in the mix the funding distinction genuinely matters, so the network moved to
+`cardNetwork` and `cardType` now says what it sounds like it says. Nothing is lost — the
+network is still on the response, one field along.
 
 ## Errors
 
